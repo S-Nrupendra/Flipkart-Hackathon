@@ -1,0 +1,106 @@
+================================================================================
+                    DEMAND PREDICTION - APPROACH DOCUMENT
+================================================================================
+
+1. PROBLEM STATEMENT
+--------------------
+Predict the 'demand' (continuous float) for various geographic locations (geohash)
+at specific timestamps, given road characteristics, weather, and temperature data.
+This is a regression task, optimized for maximum R2 score.
+
+Dataset: 77,299 train rows / 41,778 test rows / 11 columns
+
+
+2. DATA OVERVIEW
+----------------
+Columns:
+  - Index          : Row identifier (int)
+  - geohash        : Geographic hash code (1,249 unique - HIGH cardinality)
+  - day            : Day number (48 or 49)
+  - timestamp      : Time in "H:M" format (96 unique, 15-min intervals)
+  - demand         : TARGET variable (continuous float)
+  - RoadType       : Categorical - Residential/Street/Highway (600 missing)
+  - NumberofLanes  : Integer (1-5)
+  - LargeVehicles  : Binary - Allowed/Not Allowed
+  - Landmarks      : Binary - Yes/No
+  - Temperature    : Float, degrees (2,495 missing)
+  - Weather        : Categorical - Sunny/Rainy/Foggy/Snowy (797 missing)
+
+
+3. FEATURE ENGINEERING
+----------------------
+a) Timestamp Decomposition:
+   - Extracted 'hour' and 'minute' from "H:M" format
+   - Created 'time_minutes' = hour*60 + minute
+   - Cyclical sin/cos encoding for hour and minutes
+   - Time bucket: binned hours into 6 periods
+
+b) Geohash Engineering (High Cardinality - 1249 unique):
+   - Label encoded the full geohash for tree models
+   - Extracted geohash prefixes at 4-char and 5-char levels
+   - Target encoding: mean, std, and count of demand per geohash
+
+c) Categorical Encoding:
+   - RoadType: mapped to 0/1/2 (NaN left as-is for GBDT)
+   - Weather: mapped to 0/1/2/3 (NaN left as-is for GBDT)
+   - LargeVehicles & Landmarks: binary encoded
+
+d) Missing Value Strategy:
+   - GBDT models handle NaN natively with optimal split direction
+   - Added 'Temperature_missing' binary indicator
+
+e) Interaction Features:
+   - lanes_x_road, temp_x_weather, lanes_x_landmarks, lanes_x_largeveh
+
+Total features: 26
+
+
+4. MODELING APPROACH
+--------------------
+3-model ensemble with 5-Fold Cross-Validation:
+
+a) LightGBM: lr=0.03, num_leaves=127, early_stop=100
+   OOF R2: 0.956564
+
+b) XGBoost: lr=0.03, max_depth=8, hist tree method
+   OOF R2: 0.957410
+
+c) CatBoost: lr=0.03, depth=8, l2_leaf_reg=3
+   OOF R2: 0.957927
+
+d) Ensemble (Weighted Average):
+   Weights -> LGB: 0.10, XGB: 0.35, CAT: 0.55
+   Final OOF R2: 0.958641
+
+
+5. WHY THIS APPROACH MAXIMIZES R2
+----------------------------------
+- GBDT handles missing values natively (no imputation bias)
+- Label encoding works well for tree models with high-cardinality features
+- Target encoding captures location-specific demand patterns
+- Cyclical time encoding preserves temporal continuity
+- Ensemble of 3 diverse models reduces variance
+- 5-Fold CV ensures robust evaluation
+
+
+6. TOOLS & LIBRARIES USED
+--------------------------
+- Python 3.13
+- pandas: data loading & manipulation
+- numpy: numerical operations
+- scikit-learn: KFold CV, R2 metric, LabelEncoder
+- LightGBM: gradient boosting model
+- XGBoost: gradient boosting model
+- CatBoost: gradient boosting model
+
+
+7. SOURCE FILES
+---------------
+- dataset/train.csv          : Training data (77,299 rows x 11 columns)
+- dataset/test.csv           : Test data (41,778 rows x 10 columns)
+- dataset/sample_submission.csv : Submission format
+- eda.ipynb                  : Exploratory data analysis notebook
+- pipeline.ipynb             : Full training & prediction pipeline
+- predicted_demand.csv       : Final predictions output
+- approach.txt               : This approach document
+================================================================================
