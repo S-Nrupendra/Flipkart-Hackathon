@@ -60,17 +60,17 @@ Total features: 26
 3-model ensemble with 5-Fold Cross-Validation:
 
 a) LightGBM: lr=0.03, num_leaves=127, early_stop=100
-   OOF R2: 0.956564
+   OOF R2: 0.949483
 
 b) XGBoost: lr=0.03, max_depth=8, hist tree method
-   OOF R2: 0.957410
+   OOF R2: 0.947335
 
 c) CatBoost: lr=0.03, depth=8, l2_leaf_reg=3
-   OOF R2: 0.957927
+   OOF R2: 0.921022
 
 d) Ensemble (Weighted Average):
-   Weights -> LGB: 0.10, XGB: 0.35, CAT: 0.55
-   Final OOF R2: 0.958641
+   Weights -> LGB: 0.75, XGB: 0.10, CAT: 0.15
+   Final OOF R2: 0.946946
 
 
 5. WHY THIS APPROACH MAXIMIZES R2
